@@ -45,4 +45,6 @@ Because direct client table access is revoked, a leaked anon key alone cannot re
 
 ## Preview environments
 
-Preview has only `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Server routes there have no service-role key and no way to reach tracker tables (client roles lost their grants), so preview builds render but data calls fail. Add a server key to Preview only if a preview against live data is genuinely needed.
+Preview carries the same variables as Production, so a branch preview and the Production domain behave identically: both sign in against the same Supabase project and return the same data.
+
+Preview URLs are still gated by Vercel Deployment Protection (`ssoProtection.deploymentType` is `all_except_custom_domains`), so an unauthenticated visitor gets the Vercel login wall instead of the tracker's sign-in page. The Production domain is exempt because it counts as a custom domain. To make previews shareable, change Settings -> Deployment Protection in the Vercel dashboard; note that Preview then exposes the live database to anyone holding the URL.
