@@ -41,9 +41,9 @@ Required server-side configuration is documented in `.env.example`. The Supabase
 
 ## Preview and deployment
 
-The local preview should be reviewed before creating or promoting a Vercel deployment. This repository branch is not the Git source currently attached to the existing Vercel project; that project is connected to `asifrashid-debug/carrybee-issue-escalation`. Do not change that linkage or deploy to production as part of local preview work.
+Preview and Production run on the Vercel project `carrybee-issue-tracker`, which is connected to this repository. The separate `carrybee-escalation-tracker` project belongs to `asifrashid-debug/carrybee-issue-escalation`; leave that linkage unchanged.
 
-The existing Supabase database currently has permissive pilot RLS policies. The server application enforces session and role checks, but direct database access is not least-privilege. Do not broaden preview credentials or use the production service-role key in a preview deployment until the owner approves a preview-safe database and RLS plan.
+The database was hardened in migration `014_harden_public_api.sql`. Every public table has RLS enabled and forced, the pilot-wide `pilot_all` policies were dropped, and `anon` / `authenticated` no longer hold table grants. The service-role key stays server-only and is the only way the application reaches tracker tables. See `DEPLOY.md` for the environment variables and the deployment checklist.
 
 ## Google Sheets webhook
 

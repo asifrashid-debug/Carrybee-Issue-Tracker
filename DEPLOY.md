@@ -1,9 +1,38 @@
-# Deployment gate
+# Deployment notes
 
-Do not deploy this branch to production as part of the build task. First review the local preview, then explicitly approve a Vercel preview deployment.
+## Current state
 
-The existing Vercel project is already associated with `asifrashid-debug/carrybee-issue-escalation`, not this repository. Do not retarget it or create another Vercel project without approval.
+- Vercel project: `carrybee-issue-tracker` (`prj_JfvNd7d0cAeHekGfhLlUnWSzoLwa`), connected to `asifrashid-debug/Carrybee-Issue-Tracker`.
+- Supabase project: `kssypfibhlmoxucabhdu` (ap-southeast-1).
+- The database was hardened by migration `harden_public_api` (`supabase/migrations/014_harden_public_api.sql`): RLS is enabled and forced on every public table, the pilot-wide `pilot_all` policies are gone, and `anon` / `authenticated` have no table grants. Browser clients use the anon key for Supabase Auth only.
+- The existing Vercel project `carrybee-escalation-tracker` belongs to a different repository. Leave it unchanged.
 
-Before a connected Vercel preview can read tracker data, establish an isolated preview-safe Supabase environment and credentials. The current project uses permissive pilot RLS policies, so do not make the production service-role key available to preview deployments. Keep the production Vercel configuration unchanged until the owner approves a deployment plan.
+## Environment variables (Production)
 
-The application uses the environment names in `.env.example`. Supabase service credentials, Google OAuth credentials, spreadsheet IDs and the webhook secret are server-only; never commit them or expose them under a `NEXT_PUBLIC_` variable.
+Public (safe to expose, used by Supabase Auth in the browser):
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+Server-only, never prefixed with `NEXT_PUBLIC_`:
+
+- `SUPABASE_SERVICE_ROLE_KEY` — server data access; bypasses RLS after the app validates session and role.
+- `WEBHOOK_SECRET` — shared secret for the Apps Script sheet webhook. The route fails closed (503) when this is unset.
+- `SHEET_ISD`, `SHEET_OSD`, `SHEET_CTG` — zone spreadsheet IDs.
+- `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REFRESH_TOKEN` — sheet push/reconcile. Without these, writes still land in the database and the queue entry is recorded as `failed` in `sync_log`.
+
+## Access model
+
+1. Supabase Auth signs the user in (cookie session).
+2. `middleware.js` maps the signed-in email to an active `users_roles` row and enforces tab access.
+3. Route handlers re-check the session, then read and write through the server-side service-role client and apply `lib/roles.js` / `lib/visibility.js` scoping.
+
+Because direct client table access is revoked, a leaked anon key alone cannot read or modify tracker data.
+
+## Deployment checklist
+
+1. Confirm the Production environment variables above are present.
+2. Deploy to Production and open the project domain.
+3. Set the Supabase Auth site URL and redirect allow-list to the project domain (already set to `https://carrybee-issue-tracker.vercel.app`).
+4. Confirm Vercel Deployment Protection is off for Production, otherwise users hit a Vercel login wall instead of the tracker.
+5. Verify sign-in, `/api/me`, the tracker list, and a sheet edit round-trip.

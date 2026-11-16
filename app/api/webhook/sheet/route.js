@@ -1,13 +1,29 @@
 import { NextResponse } from 'next/server';
+import { timingSafeEqual } from 'node:crypto';
 import { supabaseAdmin } from '../../../../lib/supabase';
 import { notifyHubResponse } from '../../../../lib/notify';
 export const dynamic = 'force-dynamic';
 const LAYER_FIELDS = ['layer1_response','layer2_response','layer3_response'];
+
+// Constant-time compare so the shared secret cannot be probed by timing.
+function secretMatches(given) {
+  const expected = process.env.WEBHOOK_SECRET;
+  if (!expected || typeof given !== 'string') return false;
+  const a = Buffer.from(expected);
+  const b = Buffer.from(given);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
 // Apps Script on-edit trigger posts { issue_id, field, new_value, editor_email, edit_time, secret }
 export async function POST(req) {
+  const body = await req.json().catch(() => ({}));
+  // Fail closed: an unset secret would otherwise leave this endpoint open to anonymous writes.
+  if (!process.env.WEBHOOK_SECRET) {
+    return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 });
+  }
+  if (!secretMatches(body.secret)) return NextResponse.json({ error: 'Bad secret' }, { status: 401 });
   const sb = supabaseAdmin();
-  const body = await req.json();
-  if (process.env.WEBHOOK_SECRET && body.secret !== process.env.WEBHOOK_SECRET) return NextResponse.json({ error: 'Bad secret' }, { status: 401 });
   const { issue_id, field, new_value, editor_email } = body;
   if (!issue_id || !field) return NextResponse.json({ error: 'issue_id + field required' }, { status: 400 });
   const { data: cur } = await sb.from('escalations').select('*').eq('issue_id', issue_id).single();
