@@ -45,6 +45,8 @@ Preview and Production run on the Vercel project `carrybee-issue-tracker`, which
 
 The database was hardened in migration `014_harden_public_api.sql`. Every public table has RLS enabled and forced, the pilot-wide `pilot_all` policies were dropped, and `anon` / `authenticated` no longer hold table grants. The service-role key stays server-only and is the only way the application reaches tracker tables. See `DEPLOY.md` for the environment variables and the deployment checklist.
 
-## Google Sheets webhook
+## Apps Script webhook target
 
 The Apps Script handler is in `apps-script/Code.gs`. It expects the configured webhook URL and shared secret; keep that secret in the Apps Script properties and the Vercel server environment only.
+
+`WEBHOOK_URL` points at the Production deployment (`https://carrybee-issue-tracker.vercel.app/api/webhook/sheet`). After changing the URL or the secret, re-paste `Code.gs` in each zone sheet (ISD, OSD, CTG), set `WEBHOOK_SECRET` in Script properties to the same value as the Vercel variable, then run `checkSetup()` and `installEditTrigger()` again. The endpoint returns 401 for a wrong secret and 503 when no secret is configured, so a failed probe is visible in the Apps Script log.

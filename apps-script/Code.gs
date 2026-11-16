@@ -15,7 +15,7 @@
  * would fire twice for every edit.
  */
 
-const WEBHOOK_URL = 'https://carrybee-escalation-tracker.vercel.app/api/webhook/sheet';
+const WEBHOOK_URL = 'https://carrybee-issue-tracker.vercel.app/api/webhook/sheet';
 const SHEET_NAME = 'Active';
 const HEADER_ROW = 1;
 const ISSUE_ID_COL = 1; // Column A: Issue ID (DB-owned)
