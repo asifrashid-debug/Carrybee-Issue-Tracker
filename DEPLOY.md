@@ -36,3 +36,13 @@ Because direct client table access is revoked, a leaked anon key alone cannot re
 3. Set the Supabase Auth site URL and redirect allow-list to the project domain (already set to `https://carrybee-issue-tracker.vercel.app`).
 4. Confirm Vercel Deployment Protection is off for Production, otherwise users hit a Vercel login wall instead of the tracker.
 5. Verify sign-in, `/api/me`, the tracker list, and a sheet edit round-trip.
+
+## Open follow-ups
+
+- **Rotate the Supabase legacy `anon` and `service_role` JWTs.** They were displayed during setup, so treat them as exposed. Rotate the JWT secret in the Supabase dashboard, then update `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel Production and redeploy. The newer `sb_publishable_*` / `sb_secret_*` keys are the preferred replacement; Supabase masks their values after creation, so copy the new secret key at creation time.
+- **Add `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REFRESH_TOKEN`** to Vercel Production. Until then, tracker writes succeed but the sheet push is queued as `failed` in `sync_log` and `/sync` shows the backlog.
+- **Re-install the Apps Script trigger in all three zone sheets** with `WEBHOOK_SECRET` set in Script properties. The apps script now posts to `https://carrybee-issue-tracker.vercel.app/api/webhook/sheet`.
+
+## Preview environments
+
+Preview has only `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Server routes there have no service-role key and no way to reach tracker tables (client roles lost their grants), so preview builds render but data calls fail. Add a server key to Preview only if a preview against live data is genuinely needed.
